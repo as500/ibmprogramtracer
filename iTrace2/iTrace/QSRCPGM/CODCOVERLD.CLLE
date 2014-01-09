@@ -1,0 +1,108 @@
+000100120823/* CODCOVERLD.clle source                                      */
+000101120823/*                                                             */
+000102120823/* Description: This program prepares the environment in order */
+000103120823/*              to invoke the CODCOVER.pgm program with the    */
+000104120823/*              appropiate environment                         */
+000105120823/*                                                             */
+000106120823/* Author     : Isaac Ramirez Herrera                          */
+000107120823/* Created on : August 22, 2012                                */
+000108120823
+000109121008             PGM        PARM(&PROGRAM &PGMTYPE &TRACEDATA &OUTLIB &PREFFIX)
+000111120823             DCL        VAR(&PROGRAM)   TYPE(*CHAR) LEN(20)
+000113120823             DCL        VAR(&PGMTYPE)   TYPE(*CHAR) LEN(10)
+000114120823             DCL        VAR(&TRACEDATA) TYPE(*CHAR) LEN(20)
+000115120823             DCL        VAR(&OUTLIB)    TYPE(*CHAR) LEN(10)
+000116121008             DCL        VAR(&PREFFIX)   TYPE(*CHAR) LEN(4)
+000117120823
+000119120823             DCL        VAR(&TRACELIB) TYPE(*CHAR) LEN(10)
+000120120823             DCL        VAR(&TRACENAM) TYPE(*CHAR) LEN(10)
+000121121008             DCL        VAR(&OUTCOVER) TYPE(*CHAR) LEN(10)
+000122121008             DCL        VAR(&OUTTOTAL) TYPE(*CHAR) LEN(10)
+000123120823
+000129120823             CHGVAR     VAR(&TRACENAM) VALUE(%SST(&TRACEDATA 1 10))
+000130120823             CHGVAR     VAR(&TRACELIB) VALUE(%SST(&TRACEDATA 11 10))
+000131120823
+000132121008
+000133121004             /* Set debug mode *ON */
+000134121004             /* ------------------ */
+000135121004             STRDBG     UPDPROD(*YES)
+000136121004             MONMSG     MSGID(CPF0000)
+000137121004
+000138120823             /* Check if the tracedata file exist */
+000139120823             /* --------------------------------- */
+000140120823             CHKOBJ     OBJ(&TRACELIB/&TRACENAM) OBJTYPE(*FILE)
+000141120823             MONMSG     MSGID(CPF9801) EXEC(DO)
+000142120823                SNDPGMMSG  MSGID(CPF9898) MSGF(QCPFMSG) MSGDTA('Trace file doesnt exist')
+000143120823                RETURN
+000144120823             ENDDO
+000145120823
+000148120823             /* Create the temporary file that will contains the original source */
+000149120823             /* ---------------------------------------------------------------- */
+000150120824             CHKOBJ     OBJ(QTEMP/FULLCODE) OBJTYPE(*FILE)
+000151120824             MONMSG     MSGID(CPF9801) EXEC(DO)
+000152130820                CRTDUPOBJ  OBJ(FULLCODE) FROMLIB(*LIBL) OBJTYPE(*FILE) TOLIB(QTEMP)
+000153120824                MONMSG     MSGID(CPF0000) EXEC(DO)
+000154120824                   SNDPGMMSG  MSGID(CPF9898) MSGF(QCPFMSG) MSGDTA('Error creating FULLCODE +
+000155120824                                file')
+000156120824                   RETURN
+000157120824                ENDDO
+000158120824             ENDDO
+000159121008
+000164120823
+000165121008             /* Create the output files */
+000166121008             /* ----------------------- */
+000167121008
+000168121008             /* Set the output file names considering the preffix specified */
+000169121008             IF         COND(&PREFFIX *NE 'DFT') THEN(DO)
+000170121008                CHGVAR     VAR(&OUTCOVER) VALUE(&PREFFIX *TCAT 'TRCCVR')
+000171121008                CHGVAR     VAR(&OUTTOTAL) VALUE(&PREFFIX *TCAT 'CVRTOT')
+000173121008             ENDDO
+000174121008             ELSE       CMD(DO)
+000175121008                CHGVAR     VAR(&OUTCOVER) VALUE('TRACECOVER')
+000176121008                CHGVAR     VAR(&OUTTOTAL) VALUE('COVERTOTAL')
+000177121008             ENDDO
+000178121008
+000180121008
+000181121008             /* Create the trace cover file */
+000182121008             CHKOBJ     OBJ(&OUTLIB/&OUTCOVER) OBJTYPE(*FILE)
+000183120823             MONMSG     MSGID(CPF0000) EXEC(DO)
+000184121008                CRTDUPOBJ  OBJ(TRACECOVER) FROMLIB(TSX) OBJTYPE(*FILE) TOLIB(&OUTLIB) +
+000185121008                             NEWOBJ(&OUTCOVER)
+000186120823                MONMSG     MSGID(CPF0000) EXEC(DO)
+000187120823                   SNDPGMMSG  MSGID(CPF9898) MSGF(QCPFMSG) MSGDTA('Error creating TRACECOVER +
+000188120823                                file')
+000189120823                   RETURN
+000190120823                ENDDO
+000191120823             ENDDO
+000192120823
+000193121008             /* Create the totals output file */
+000194121008             CHKOBJ     OBJ(&OUTLIB/&OUTTOTAL) OBJTYPE(*FILE)
+000195121008             MONMSG     MSGID(CPF0000) EXEC(DO)
+000196121008                CRTDUPOBJ  OBJ(COVERTOTAL) FROMLIB(TSX) OBJTYPE(*FILE) TOLIB(&OUTLIB) +
+000197121008                             NEWOBJ(&OUTTOTAL)
+000198121008                MONMSG     MSGID(CPF0000) EXEC(DO)
+000199121008                   SNDPGMMSG  MSGID(CPF9898) MSGF(QCPFMSG) MSGDTA('Error creating COVERTOTAL +
+000200121008                                file')
+000201121008                   RETURN
+000202121008                ENDDO
+000203121008             ENDDO
+000204121008
+000205120823             /* Override the work files */
+000206120823             /* ----------------------- */
+000207120823             OVRDBF     FILE(TRACEDATA) TOFILE(&TRACELIB/&TRACENAM) OVRSCOPE(*JOB)
+000208120823             OVRDBF     FILE(FULLCODE) TOFILE(QTEMP/FULLCODE) OVRSCOPE(*JOB)
+000209121008             OVRDBF     FILE(TRACECOVER) TOFILE(&OUTLIB/&OUTCOVER) OVRSCOPE(*JOB)
+000210121008             OVRDBF     FILE(COVERTOTAL) TOFILE(&OUTLIB/&OUTTOTAL) OVRSCOPE(*JOB)
+000211120823
+000212120823             /* Invoke the program */
+000213120823             /* ------------------ */
+000214120823             CALL       PGM(CODCOVER) PARM(&PROGRAM &PGMTYPE)
+000215120823
+000216120823             /* Remove overrides */
+000217120823             /* ---------------- */
+000218121008             DLTOVR     FILE(TRACEDATA) LVL(*JOB)
+000219121008             DLTOVR     FILE(FULLCODE) LVL(*JOB)
+000220121008             DLTOVR     FILE(TRACECOVER) LVL(*JOB)
+000221121008             DLTOVR     FILE(COVERTOTAL) LVL(*JOB)
+000222120823
+000223120823             ENDPGM
