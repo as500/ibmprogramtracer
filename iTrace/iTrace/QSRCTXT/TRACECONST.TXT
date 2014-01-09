@@ -1,0 +1,12 @@
+000100120720      /if not defined(TRACECONST)
+000101120720      /define TRACECONST
+000102120720
+000103120720     /**
+000104120720      * Types of debug view
+000105120720      */
+000106120720     d STATEMENT_VIEW  c                   const('*STATEMENT')
+000107120720     d LISTING_VIEW    c                   const('*LISTING')
+000108120720     d TEXT_VIEW       c                   const('*TEXT')
+000109120823     d ALL_VIEWS       c                   const('*ALL      ')
+000110120720
+000111120720      /endif

@@ -1,0 +1,22 @@
+000100120731      /if not defined(TRCRULES)
+000101120731      /define TRCRULES
+000102120731
+000103120802     d TRCRULES_loadRules...
+000104120802     d                 pr
+000105120802
+000106120802     d TRCRULES_destroy...
+000107120802     d                 pr
+000108120802
+000109120731     d TRCRULES_doStepInto...
+000110120731     d                 pr              n
+000111120731     d library                       10a   const
+000112120731     d program                       10a   const
+000113120802     d procedure                    255a   const
+000114120731
+000115120802     d TRCRULES_writeTrace...
+000116120802     d                 pr              n
+000117120802     d library                       10a   const
+000118120802     d program                       10a   const
+000119120802     d procedure                    255a   const
+000120120802
+000124120731      /endif

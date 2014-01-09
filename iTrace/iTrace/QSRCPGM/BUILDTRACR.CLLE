@@ -1,0 +1,139 @@
+000100121018/* BUILDTRACR.clle source                                      */
+000101121018/*                                                             */
+000102121018/* Description: This program builds all the necessary objects  */
+000103121018/*              used by the itracer and codcoverag tools       */
+000104121018/*                                                             */
+000105121018/* Author     : Isaac Ramirez Herrera                          */
+000106121018/* Created on : August 22, 2012                                */
+000107121018/*                                                             */
+000108121018/*  In order to build the itrace tool, you must compile this   */
+000109121018/*  CL source with the command:                                */
+000110121018/*                                                             */
+000111121018/*  CRTBNDCL PGM(BUILDTRACR) SRCFILE(QSRCPGM)                  */
+000112121018/*           SRCMBR(BUILDTRACR) OPTION(*EVENTF) REPLACE(*YES)  */
+000113121018/*           TGTRLS(V6R1M0) DBGVIEW(*SOURCE)                   */
+000114121018/*                                                             */
+000115121018/*  Before executing the BUILDTRACR program, make sure the     */
+000116121018/*  tables COVERTOTAL, FULLCODE, TRACECOVER, TRACEDATA,        */
+000117121018/*  TRACERULES, RULESCOPE and RULETYPE exists in the           */
+000118121018/*  destination library. If the table don't exist, create them */
+000119121018/*  with the SQL scripts in the QSRCSQL                        */
+000120121018/*                                                             */
+000121121018/* Parameter named &LIB indicates the destination library in   */
+000122121018/* which the new objects will be created                       */
+000123121012
+000124121018             PGM        PARM(&LIB)
+000125120721
+000126121214             DCL        VAR(&LIB) TYPE(*CHAR) LEN(10) VALUE('TSX')
+000127120722
+000128121018             CRTRPGMOD  MODULE(&LIB/LLIST) SRCFILE(&LIB/QSRCMOD) SRCMBR(LLIST) DBGVIEW(*NONE) +
+000129121018                          REPLACE(*YES) TGTRLS(V6R1M0)
+000130120722
+000131121018             CRTRPGMOD  MODULE(&LIB/LLIST_SORT) SRCFILE(&LIB/QSRCMOD) SRCMBR(LLIST_SORT) +
+000132121018                          DBGVIEW(*NONE) REPLACE(*YES) TGTRLS(V6R1M0)
+000133120722
+000134121018             CRTSRVPGM  SRVPGM(&LIB/LLIST) MODULE(&LIB/LLIST &LIB/LLIST_SORT) SRCFILE(QSRCSRV) +
+000135121018                          TEXT('Linked List') BNDDIR(QC2LE) OPTION(*DUPPROC) TGTRLS(V6R1M0)
+000136120722
+000137121018             CRTRPGMOD  MODULE(&LIB/CEXCEPTION) SRCFILE(&LIB/QSRCMOD) SRCMBR(CEXCEPTION) +
+000138121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE) TGTRLS(V6R1M0)
+000139120723
+000140121018             CRTSRVPGM  SRVPGM(&LIB/CEXCEPTION) MODULE(&LIB/CEXCEPTION) SRCFILE(QSRCSRV) +
+000141121018                          OPTION(*DUPPROC) TGTRLS(V6R1M0)
+000142120723
+000143120724             /* Compila y enlaza el programa de servicio CSQLUTIL */
+000144121018             CRTRPGMOD  MODULE(&LIB/CSQLUTIL) SRCFILE(&LIB/QSRCMOD) SRCMBR(CSQLUTIL) +
+000145121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE) TGTRLS(V6R1M0)
+000146120724
+000147121018             CRTSRVPGM  SRVPGM(&LIB/CSQLUTIL) MODULE(&LIB/CSQLUTIL) EXPORT(*SRCFILE) +
+000148121018                          SRCFILE(QSRCSRV) OPTION(*DUPPROC) TGTRLS(V6R1M0)
+000149120724
+000150120724             /* Compila y enlaza el programa de servicio CSTRINGUTL */
+000151121018             CRTRPGMOD  MODULE(&LIB/CSTRINGUTL) SRCFILE(&LIB/QSRCMOD) SRCMBR(CSTRINGUTL) +
+000152121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE) TGTRLS(V6R1M0)
+000153120724
+000154121018             CRTSRVPGM  SRVPGM(&LIB/CSTRINGUTL) MODULE(&LIB/CSTRINGUTL) SRCFILE(QSRCSRV) +
+000155121018                          OPTION(*DUPPROC) TGTRLS(V6R1M0)
+000156120724
+000157120802             /* Compiles and binds the REGEXP service program */
+000158120802             /* --------------------------------------------- */
+000159121018             CRTRPGMOD  MODULE(&LIB/CREGEXP) SRCFILE(&LIB/QSRCMOD) SRCMBR(CREGEXP) +
+000160121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE)
+000161120802
+000162121018             CRTSRVPGM  SRVPGM(&LIB/CREGEXP) MODULE(&LIB/CREGEXP) SRCFILE(QSRCSRV) +
+000163121018                          OPTION(*DUPPROC)
+000164120802
+000165120723             /* Compiles and binds the TRCENVVARS service program */
+000166120723             /* ------------------------------------------------- */
+000167121018             CRTRPGMOD  MODULE(&LIB/TRCENVVARS) SRCFILE(&LIB/QSRCMOD) SRCMBR(TRCENVVARS) +
+000168121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE) TGTRLS(V6R1M0)
+000169120723
+000170121018             CRTSRVPGM  SRVPGM(&LIB/TRCENVVARS) MODULE(&LIB/TRCENVVARS) SRCFILE(QSRCSRV) +
+000171121018                          OPTION(*DUPPROC) TGTRLS(V6R1M0)
+000172120723
+000173120721             /* Compiles and binds the TRCHANDLER service program */
+000174120721             /* ------------------------------------------------- */
+000175121018             CRTSQLRPGI OBJ(&LIB/TRCRULES) SRCFILE(&LIB/QSRCMOD) SRCMBR(TRCRULES) +
+000176121018                          OBJTYPE(*MODULE) OPTION(*EVENTF) TGTRLS(V6R1M0) REPLACE(*YES) +
+000177121018                          DBGVIEW(*NONE) COMPILEOPT('DBGVIEW(*NONE)')
+000178120802
+000179121018             CRTRPGMOD  MODULE(&LIB/TRCHANDLER) SRCFILE(&LIB/QSRCMOD) SRCMBR(TRCHANDLER) +
+000180121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE) TGTRLS(V6R1M0)
+000181120721
+000182121018             CRTRPGMOD  MODULE(&LIB/TRCUTIL) SRCFILE(&LIB/QSRCMOD) SRCMBR(TRCUTIL) +
+000183121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE) TGTRLS(V6R1M0)
+000184120731
+000185121018             CRTSRVPGM  SRVPGM(&LIB/TRCHANDLER) MODULE(&LIB/TRCHANDLER &LIB/TRCRULES TRCUTIL) +
+000186121018                          SRCFILE(&LIB/QSRCSRV) BNDSRVPGM(QSYS/QTEDBGS) OPTION(*DUPPROC) +
+000187121018                          TGTRLS(V6R1M0)
+000188120721
+000189120816             /* Compiles and binds the TRACEDATA service program */
+000190120816             /* ------------------------------------------------ */
+000191121018             CRTSQLRPGI OBJ(&LIB/TRACEDATA) SRCFILE(&LIB/QSRCMOD) SRCMBR(TRACEDATA) +
+000192121018                          OBJTYPE(*MODULE) OPTION(*EVENTF) TGTRLS(V6R1M0) REPLACE(*YES) +
+000193121018                          DBGVIEW(*NONE) COMPILEOPT('DBGVIEW(*NONE)')
+000194120816
+000195121018             CRTSRVPGM  SRVPGM(&LIB/TRACEDATA) MODULE(&LIB/TRACEDATA) EXPORT(*SRCFILE) +
+000196121018                          SRCFILE(&LIB/QSRCSRV) BNDSRVPGM((&LIB/CSQLUTIL)) TGTRLS(V6R1M0)
+000197120816
+000198120721             /* Compiles and binds the TRCSESHDLR (Session Handler) program */
+000199120721             /* ----------------------------------------------------------- */
+000200121018             CRTBNDRPG  PGM(&LIB/TRCSESHDLR) SRCFILE(&LIB/QSRCPGM) SRCMBR(TRCSESHDLR) +
+000201121018                          OPTION(*EVENTF) DBGVIEW(*NONE) REPLACE(*YES) TGTRLS(V6R1M0)
+000203120721
+000204120721             /* Compiles and binds the TRCSTPHDLR (Stop Handler) program */
+000205120721             /* ----------------------------------------------------------- */
+000206121018             CRTBNDRPG  PGM(&LIB/TRCSTPHDLR) SRCFILE(&LIB/QSRCPGM) SRCMBR(TRCSTPHDLR) +
+000207121018                          OPTION(*EVENTF) DBGVIEW(*NONE) REPLACE(*YES) TGTRLS(V6R1M0)
+000208120721
+000209121018             CRTBNDCL   PGM(&LIB/TRCSESLDR) SRCFILE(&LIB/QSRCPGM) SRCMBR(TRCSESLDR) +
+000210121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE) TGTRLS(V6R1M0)
+000211120816
+000212120721             /* Creates the iTrace Command */
+000213120721             /* -------------------------- */
+000214121018             CRTCMD     CMD(&LIB/ITRACE) PGM(&LIB/TRCSESLDR) SRCFILE(&LIB/QSRCPGM) +
+000215121018                          SRCMBR(ITRACE) REPLACE(*YES)
+000216120726
+000217120726             /* Creates the SetCaseId command */
+000218120726             /* ----------------------------- */
+000219121018             CRTBNDRPG  PGM(&LIB/TRCSETCASE) SRCFILE(&LIB/QSRCPGM) SRCMBR(TRCSETCASE) +
+000220121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE) TGTRLS(V6R1M0)
+000221120726
+000222121018             CRTCMD     CMD(&LIB/SETCASEID) PGM(&LIB/TRCSETCASE) SRCFILE(&LIB/QSRCPGM) +
+000223121018                          SRCMBR(SETCASEID) REPLACE(*YES)
+000224120729
+000225120823
+000226120823             /* Create the CodCover command */
+000227120823             /* --------------------------- */
+000228121214             CRTSQLRPGI OBJ(&LIB/CODCOVER) SRCFILE(&LIB/QSRCPGM) SRCMBR(CODCOVER) +
+000229121214                          OPTION(*EVENTF) TGTRLS(V6R1M0) REPLACE(*YES) DBGVIEW(*NONE)
+000230121214                          /*MPILEOPT('DBGVIEW(*NONE)')*/
+000231120823
+000232121018             CRTBNDCL   PGM(&LIB/CODCOVERLD) SRCFILE(&LIB/QSRCPGM) SRCMBR(CODCOVERLD) +
+000233121018                          REPLACE(*YES) OPTION(*EVENTF) DBGVIEW(*NONE) TGTRLS(V6R1M0)
+000234120823
+000235121018             CRTCMD     CMD(&LIB/CODCOVERAG) PGM(&LIB/CODCOVERLD) SRCFILE(&LIB/QSRCPGM) +
+000236121018                          SRCMBR(CODCOVERAG) REPLACE(*YES)
+000237120823
+000238120823
+000239121018             ENDPGM
