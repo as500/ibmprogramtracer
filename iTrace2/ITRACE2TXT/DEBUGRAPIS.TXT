@@ -100,13 +100,4 @@
 000203120731     d compilerId                    20a   const
 000204120731     d ApiErr                              likeds(ApiError_Type)
 000205120731
-000206140110     d AddBreakpointAPI...
-000207140110     d                 pr                  extproc('QteAddBreakpoint')
-000208140110     d viewId                        10i 0 const
-000209140110     d lineNumber                    10i 0 const
-000210140110     d columnNumber                  10i 0 const
-000211140110     d lineInStatementView...
-000212140110     d                               10i 0
-000213140110     d ApiErr                              likeds(ApiError_Type)
-000214140110
-000215120720      /endif
+000206120720      /endif

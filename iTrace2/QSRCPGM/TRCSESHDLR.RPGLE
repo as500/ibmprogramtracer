@@ -66,7 +66,10 @@
 000175120725
 000179120722     d STOP_HANDLER_PGM...
 000180120723     d                 c                   const('TRCSTPHDLR')
-000181121012
+000181140110
+000182140110     d SEP_HANDLER_PGM...
+000183140110     d                 c                   const('SRVENTHDLR')
+000184121012
 000185120724     d OPTION_ADD      c                   const('*ADD')
 000186120724
 000187120724     d OPTION_REPLACE  c                   const('*REPLACE')
@@ -136,10 +139,16 @@
 000259120722     d stopHandlerPgm  ds                  qualified
 000260120722     d  name                         10a
 000261120722     d  library                      10a
-000263120801
-000266120719      /free
-000267120721       monitor;
-000270120721         select;
+000262140110     d
+000263140110     d sepHandlerPgm   ds                  qualified
+000264140110     d  name                         10a
+000265140110     d  library                      10a
+000266140110     d
+000267140110     d errorDS         ds                  likeds(ApiError_Type) inz(*likeds)
+000268120801
+000269120719      /free
+000270120721       monitor;
+000271120721         select;
 000272120724           when set = '*ON';
 000273120722             stopHandlerPgm.name    = STOP_HANDLER_PGM;
 000274121012             //The stopHandler MUST be in the same library as the
@@ -147,13 +156,13 @@
 000276121012             stopHandlerPgm.library = psds.pgm_library;
 000277120722
 000278120802             //Load the rules
-000279120802             TRCRULES_loadRules();
+000279140110             TRCRULES_loadRules();
 000280120802
 000281120801             //Save the traceType on the environment
-000282120801             TRCENVVARS_setTraceType(traceType);
+000282140110             TRCENVVARS_setTraceType(traceType);
 000283120801
 000284120726             //Prepare the data area
-000285120801             preparaDtaara(trcdtaara);
+000285140110             preparaDtaara(trcdtaara);
 000286120726
 000287120724             //Create the output file
 000288120724             prepareOutPutFile(outFile:outFileOpt);
@@ -162,55 +171,59 @@
 000291120816             TRCENVVARS_setTraceID(TRACEDATA_getNextTraceId());
 000292120724
 000293120724             //Save the job being debugged
-000294120724             saveDebuggedJob(batchTrace:jobToTrace);
+000294140110             saveDebuggedJob(batchTrace:jobToTrace);
 000295120724
 000296120724             //Start the debugging session
-000297121001             TRCHANDLER_startSourceDebug(program:pgmType:stopHandlerPgm);
-000298121001
-000302120816             //Clear trace data
-000303121001             TRACEDATA_clear();
-000304120816             TRACEDATA_clearCache();
-000305120816
-000306120731             TRCUTIL_sendProgramMessage('Trace started successfully');
-000307120731           when set = '*OFF';
-000308120802             cleanup();
-000309120731             TRCUTIL_sendProgramMessage('Trace ended successfully');
-000310120721           other;
-000311120721             CEXCEPTION_jobPrintf('Unsupported option');
-000312120721         endsl;
-000313120721       on-error;
-000314120721         CEXCEPTION_catchException();
-000315120721         CEXCEPTION_printStackTrace();
-000316120802         cleanup();
-000317120731         TRCUTIL_sendProgramMessage('Errors ocurred during the execution of +
-000318120731           the program. Check Joblog');
-000319120731       endmon;
-000320120721
-000321120719       *inlr = *on;
-000322120719       return;
-000323120719      /end-free
-000324120719      //_______________________________________________________________________
-000325120719
-000326120816     /**
-000327120816      * \brief cleanup: release all resources an initialize the environment
-000328120816      *
-000329120816      * <p>
-000330120816      *  This procedure releases all previously allocated resources and
-000331120816      *  initialize the environment values
-000332120816      * </p>
-000333120816      *
-000334120816      */
-000335120802     p cleanup         b
-000336120802
-000337120802      /free
-000338120816       TRACEDATA_flushRecordCache();
-000339120802       TRCHANDLER_tearDownTrace();
-000340120802       TRCENVVARS_clear();
-000341120802       TRCRULES_destroy();
-000342120802      /end-free
-000343120802     p                 e
-000344120802      //_______________________________________________________________________
-000345120802
+000297140110             //TRCHANDLER_startSourceDebug(program:pgmType:stopHandlerPgm);
+000298140110             TRCHANDLER_startSEPMonitor(program:pgmType:stopHandlerPgm);
+000299140110
+000300140110             //Register SEPStopHandler
+000301140110             //RegisterServiceEntyPointAPI(SEP_HANDLER_PGM:errorDS);
+000303140110
+000304120816             //Clear trace data
+000305121001             TRACEDATA_clear();
+000306120816             TRACEDATA_clearCache();
+000307120816
+000308120731             TRCUTIL_sendProgramMessage('Trace started successfully');
+000309120731           when set = '*OFF';
+000310120802             cleanup();
+000311120731             TRCUTIL_sendProgramMessage('Trace ended successfully');
+000312120721           other;
+000313120721             CEXCEPTION_jobPrintf('Unsupported option');
+000314120721         endsl;
+000315120721       on-error;
+000316120721         CEXCEPTION_catchException();
+000317120721         CEXCEPTION_printStackTrace();
+000318120802         cleanup();
+000319120731         TRCUTIL_sendProgramMessage('Errors ocurred during the execution of +
+000320120731           the program. Check Joblog');
+000321120731       endmon;
+000322120721
+000323120719       *inlr = *on;
+000324120719       return;
+000325120719      /end-free
+000326120719      //_______________________________________________________________________
+000327120719
+000328120816     /**
+000329120816      * \brief cleanup: release all resources an initialize the environment
+000330120816      *
+000331120816      * <p>
+000332120816      *  This procedure releases all previously allocated resources and
+000333120816      *  initialize the environment values
+000334120816      * </p>
+000335120816      *
+000336120816      */
+000337120802     p cleanup         b
+000338120802
+000339120802      /free
+000340120816       TRACEDATA_flushRecordCache();
+000341120802       TRCHANDLER_tearDownTrace();
+000342120802       TRCENVVARS_clear();
+000343120802       TRCRULES_destroy();
+000344120802      /end-free
+000345120802     p                 e
+000346120802      //_______________________________________________________________________
+000347120802
 000360120726     p preparaDtaara...
 000361120726     p                 b
 000362120726     d                 pi

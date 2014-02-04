@@ -1,0 +1,420 @@
+000101140113/*******************************************************************/
+000102140113/*                                                                 */
+000103140113/* FUNCTION:  The entire program listing for the program           */
+000104140113/*            containing theexample debugger discussed in the     */
+000105140113/*            preceding sections.                                  */
+000106140113/*                                                                 */
+000107140113/* LANGUAGE:  ILE C for OS/400                                     */
+000108140113/*                                                                 */
+000109140113/* APIs USED: QteRetrieveViewText, QteSubmitDebugCommand,          */
+000110140113/*            QteEndSourceDebug, QteRetrieveModuleViews,           */
+000111140113/*            QteRegisterDebugView, QteStartSourceDebug,           */
+000112140113/*            QteMapViewPosition                                   */
+000113140113/*                                                                 */
+000114140113/*******************************************************************/
+000115140113/*******************************************************************/
+000116140113
+000117140113#include <stdio.h>
+000118140113#include <string.h>
+000119140113#include <stdlib.h>
+000120140113#include <qtedbgs.h>
+000121140113
+000122140113/* Global variables holding information about a program in debug mode*/
+000123140113static _TE_VEWL0100_T *pgm_dbg_dta = NULL;
+000124140113static long current_view = 0;       /* current view - defaults to 1st*/
+000125140113static _TE_OBJLIB_T program_lib;    /* name and lib of pgm debugged  */
+000126140113
+000127140113/* ReadLine: Reads a line of input and stores it in a string.        */
+000128140113void ReadLine(char *Buffer, int length) {
+000129140113  int i;                            /* loop counter                  */
+000130140113
+000131140113  printf("Enter a debugger command or 'help'.\n");
+000132140113  fgets(Buffer,length,stdin);       /* read line of text             */
+000133140113
+000134140113  /* Blank out line from \n to the end of the string.                */
+000135140113  for (i=0; i<length; i++) {        /* loop, searching for newline   */
+000136140113    if (Buffer[i] == '\n') {        /* if newline character found
+000137140113*/
+000138140113      break;                        /* end loop searching for newline*/
+000139140113    }
+000140140113  }
+000141140113
+000142140113  memset(Buffer+i,' ',length-i);     /* blank remainder of line      */
+000143140113}
+000144140113
+000145140113/* PrintText: This function will print the text for the current view */
+000146140113void PrintText(void) {
+000147140113
+000148140113  long LineLength = 92;             /* length of lines of text       */
+000149140113  long NumberOfLines = 0;           /* lines to retrieve - 0 = all   */
+000150140113  long StartLine=1;                 /* retrieve from line 1 (first)  */
+000151140113  long bufferLength = 100000;       /* size of retrieved text buffer */
+000152140113  long viewID;                      /* view ID of text to retrieve   */
+000153140113  _TE_TEXT_BUFFER_T *buffer;        /* text retrieved by API         */
+000154140113  _TE_ERROR_CODE_T errorCode = {0}; /* Exceptions will be signaled   */
+000155140113  int i;                            /* points to start of each line  */
+000156140113  int line_number;                  /* line number counter for loop  */
+000157140113
+000158140113  /* Get View ID of current view                                     */
+000159140113  viewID = pgm_dbg_dta->Element[current_view].ViewNumber;
+000160140113
+000161140113  buffer = malloc(bufferLength);    /* malloc space for big text buf */
+000162140113
+000163140113  /* Call Retrieve_View_Text for the current view.                   */
+000164140113  QteRetrieveViewText((char *)buffer, &bufferLength, &viewID,
+000165140113                      &StartLine, &NumberOfLines, &LineLength,
+000166140113                      &errorCode);
+000167140113
+000168140113  /* Print out the text                                              */
+000169140113  for (i=0,line_number=1;
+000170140113       line_number <= buffer->NumLines;
+000171140113       line_number++,i+=LineLength) {
+000172140113     printf("%3d) %.70s\n", line_number, buffer->Text+i);
+000173140113  }
+000174140113
+000175140113  free(buffer);                     /* free memory for buffer        */
+000176140113}
+000177140113
+000178140113/* PrintViews: Prints all the views of the program being debugged.   */
+000179140113void PrintViews(void) {
+000180140113  int k;
+000181140113
+000182140113  /* loop through views printing view#, module, and view desc. text  */
+000183140113  for (k=0; k< pgm_dbg_dta->NumberElements; k++) {
+000184140113    printf("%d) %.10s:%.50s",
+000185140113           k,
+000186140113           pgm_dbg_dta->Element[k].ModuleName,
+000187140113           pgm_dbg_dta->Element[k].ViewDescription);
+000188140113    if (current_view == k)         /* indicate if view is current   */
+000189140113      printf("<---Current\n");
+000190140113    else
+000191140113      printf("\n");
+000192140113  }
+000193140113}
+000194140113
+000195140113/* ProcessListCommand:  Process list command to list views or text   */
+000196140113void ProcessListCommand(void) {
+000197140113  char *token;                      /* pointer to next token of input*/
+000198140113
+000199140113  token = strtok(NULL," ");         /* get next token in input buffer*/
+000200140113
+000201140113  if (token==NULL)                  /* list not followed by anything */
+000202140113    printf("'list' must be followed by 'views' or 'text'.\n");
+000203140113  else if (strcmp(token,"views") == 0)/* if list views               */
+000204140113    PrintViews();
+000205140113  else if (strcmp(token,"text") == 0) /* if list text                */
+000206140113    PrintText();
+000207140113  else                              /* list <something-else>         */
+000208140113    printf("'list' must be followed by 'views' or 'text'.\n");
+000209140113}
+000210140113
+000211140113/* ProcessDbgCommand:  This function will process commands sent to   */
+000212140113/*                     the QteSubmitDebugCommand API.                */
+000213140113int ProcessDbgCommand(char InputBuffer[80]) {
+000214140113  _TE_ERROR_CODE_T errorCode = {64}; /* fill in bytes provided       */
+000215140113  char OutputBuffer[4096];
+000216140113  struct _TE_RESULT_BUFFER_T *Results;
+000217140113  long InputBufferLength = 80;
+000218140113  long OutputBufferLength = sizeof(OutputBuffer);
+000219140113  long view_ID;
+000220140113  _TE_COMPILER_ID_T *CompilerID;
+000221140113  int i;
+000222140113  int return_value = 0;
+000223140113
+000224140113  view_ID = pgm_dbg_dta->Element[current_view].ViewNumber;
+000225140113  CompilerID = &pgm_dbg_dta->Element[current_view].CompilerID;
+000226140113
+000227140113  /* Give command to QteSubmitDebugCommand                           */
+000228140113  QteSubmitDebugCommand(OutputBuffer, &OutputBufferLength,
+000229140113                        &view_ID, InputBuffer, &InputBufferLength,
+000230140113                        *CompilerID, &errorCode);
+000231140113
+000232140113  if (errorCode.BytesAvailable != 0) {
+000233140113    printf("Error = %.7s\n",errorCode.ExceptionID);
+000234140113    return return_value;
+000235140113  }
+000236140113
+000237140113  /* Process results from QteSubmitDebugCommand                      */
+000238140113  Results = (_TE_RESULT_BUFFER_T *) OutputBuffer;
+000239140113
+000240140113  /* Loop through Results array                                      */
+000241140113  for (i=0; i<Results->Header.EntryCount; i++) {
+000242140113    switch (Results->Data[i].ResultKind)
+000243140113    {
+000244140113      case _TE_kStepR            :
+000245140113        printf("Step set\n");
+000246140113        return_value=1;             /* indicate step is to be done   */
+000247140113        break;
+000248140113      case _TE_kBreakR           :
+000249140113        printf("Breakpoint set");
+000250140113        break;
+000251140113      case _TE_kBreakPositionR   :
+000252140113        printf(" at line %d\n",
+000253140113               Results->Data[i].V.BreakPosition.Line);
+000254140113        break;
+000255140113      case _TE_kExpressionTextR  :
+000256140113        printf("%s",
+000257140113               ((char *)Results) + Results->Data[i].V.
+000258140113               ExpressionText.oExpressionText);
+000259140113        break;
+000260140113      case _TE_kExpressionValueR :
+000261140113        printf(" = %s\n",
+000262140113               ((char *)Results) + Results->Data[i].V.
+000263140113               ExpressionValue.oExpressionValue);
+000264140113        break;
+000265140113      case _TE_kQualifyR         :
+000266140113        printf("Qual set\n");
+000267140113        break;
+000268140113      case _TE_kClearBreakpointR :
+000269140113        printf("Breakpoint cleared\n");
+000270140113        break;
+000271140113      case _TE_kClearPgmR :
+000272140113        printf("All breakpoints cleared\n");
+000273140113        break;
+000274140113      default:                      /* ignore all other record types */
+000275140113        break;
+000276140113    }                               /* switch                        */
+000277140113  }                                 /* loop through results array    */
+000278140113  return return_value;
+000279140113}
+000280140113
+000281140113/* ProcessCommands:  Read input from user and process commands.      */
+000282140113void ProcessCommands(void) {
+000283140113  char InputBuffer[80];
+000284140113  char *token;
+000285140113  int i;
+000286140113  int step=0;                       /* do an exit for step when 1    */
+000287140113
+000288140113  if (pgm_dbg_dta == NULL) {        /* if no debug data              */
+000289140113    printf("Debug session has ended.\n");
+000290140113    exit(0);                        /* end the debugger              */
+000291140113  }
+000292140113
+000293140113  while(!step) {                    /* read until step or quit cmd   */
+000294140113    ReadLine(InputBuffer,sizeof(InputBuffer));
+000295140113    token = strtok(InputBuffer," ");
+000296140113
+000297140113    if (token==NULL) continue;      /* ignore blank lines            */
+000298140113    else if (strcmp(token,"quit") == 0) /* the quit command?         */
+000299140113      return;                       /* exit debugger                 */
+000300140113    else if (strcmp(token,"list") == 0) /* the list command?         */
+000301140113      ProcessListCommand();         /* process command               */
+000302140113    else if (strcmp(token,"switch") == 0) { /* switch command?       */
+000303140113      token = strtok(NULL," ");     /* get view number token         */
+000304140113      if (token == NULL)
+000305140113        printf("'switch' must be followed by a view number.\n");
+000306140113      else
+000307140113        current_view = atoi(token);   /* switch current view         */
+000308140113    }
+000309140113    else if (strcmp(token,"help") == 0) {
+000310140113      printf("The following are the allowed debugger commands:\n");
+000311140113      printf("  list views - lists all views in the program\n");
+000312140113      printf("  list text - lists the text of the current view\n");
+000313140113      printf("  switch n - changes current view to view n\n");
+000314140113      printf("  help - displays this help text\n");
+000315140113      printf("  quit - ends the debug session\n");
+000316140113      printf("Other commands are interpreted by the debug support.\n");
+000317140113    }
+000318140113    else {                          /* pass command to API           */
+000319140113      /* Undo modifications that strtok did                          */
+000320140113      InputBuffer[strlen(InputBuffer)] = ' ';
+000321140113
+000322140113      step = ProcessDbgCommand(InputBuffer);
+000323140113    }
+000324140113  }
+000325140113}
+000326140113
+000327140113/* TearDownDebugger: End the debugger.                               */
+000328140113void TearDownDebugger(void) {
+000329140113  _TE_ERROR_CODE_T errorCode = {8}; /* errors will be ignored        */
+000330140113
+000331140113  /* Call EndSourceDebug to get out of ILE debug mode                */
+000332140113  QteEndSourceDebug(&errorCode);
+000333140113
+000334140113  exit(0);                          /* destroy activation group      */
+000335140113}
+000336140113
+000337140113/* AddProgram: Add a program to debug mode.                          */
+000338140113void AddProgram(void) {
+000339140113
+000340140113  _TE_ERROR_CODE_T errorCode = {0};    /* Signal exceptions on error */
+000341140113  _TE_NAME_T        Library;           /* Lib returned               */
+000342140113  _TE_TIMESTAMP_T   TimeStamp;         /* TimeStamp returned         */
+000343140113  int viewIndex;
+000344140113  long int          iViewID;
+000345140113  long int          iViewLines;
+000346140113  long rtvModViewDataLength = 8;       /* size of receiver buffer    */
+000347140113  char tempBuffer[8];                  /* Temp storage               */
+000348140113  int i, tempModuleCount;
+000349140113
+000350140113  /* Call QteRetrieveModuleViews to determine the number of bytes    */
+000351140113  /* the receiver variable needs to be to hold all of the views for  */
+000352140113  /* the program.                                                    */
+000353140113  pgm_dbg_dta = (_TE_VEWL0100_T *)tempBuffer;
+000354140113  QteRetrieveModuleViews((char *)pgm_dbg_dta, &rtvModViewDataLength,
+000355140113                         "VEWL0100", &program_lib,
+000356140113                         "*PGM      ", "*ALL      ", Library,
+000357140113                         &errorCode);
+000358140113
+000359140113  /* Get a buffer large enough to hold all view information          */
+000360140113  rtvModViewDataLength = pgm_dbg_dta->BytesAvailable;
+000361140113  pgm_dbg_dta = (_TE_VEWL0100_T *)malloc(rtvModViewDataLength);
+000362140113
+000363140113  /* Call QteRetrieveModuleViews again, passing a big enough buffer. */
+000364140113  QteRetrieveModuleViews((char *)pgm_dbg_dta, &rtvModViewDataLength,
+000365140113                         "VEWL0100", &program_lib,
+000366140113                         "*PGM      ", "*ALL      ", Library,
+000367140113                         &errorCode);
+000368140113
+000369140113  /* If number of elements is zero, program is not debuggable.       */
+000370140113  if (pgm_dbg_dta->NumberElements == 0) {
+000371140113    printf("Program %.10s in Library %.10s cannot be debugged.",
+000372140113           program_lib.obj, program_lib.lib);
+000373140113    TearDownDebugger();
+000374140113  }
+000375140113
+000376140113  /* Put the library returned by Retrieve Module Views in PgmLib     */
+000377140113  memcpy(program_lib.lib, Library, sizeof(_TE_NAME_T));
+000378140113
+000379140113  /* Register all views in the program                               */
+000380140113  for (i=0; i < pgm_dbg_dta->NumberElements; i++) {
+000381140113    QteRegisterDebugView(&iViewID, &iViewLines, Library, TimeStamp,
+000382140113                         &program_lib, "*PGM      ",
+000383140113                         pgm_dbg_dta->Element[i].ModuleName,
+000384140113                         &pgm_dbg_dta->Element[i].ViewNumber,
+000385140113                         &errorCode);
+000386140113
+000387140113    /* overwrite unneeded ViewNumber with obtained view id           */
+000388140113    pgm_dbg_dta->Element[i].ViewNumber = iViewID;
+000389140113  }
+000390140113}
+000391140113
+000392140113/* Typedef for program list passed to this program at STRDBG time    */
+000393140113typedef struct {
+000394140113    _TE_OBJLIB_T PgmLib;            /* Name and Library of program   */
+000395140113    _TE_NAME_T PgmType;             /* program type, *PGM or *SRVPGM */
+000396140113} PgmList_t;
+000397140113
+000398140113/* StartUpDebugger: Initialize the debugger.                         */
+000399140113void StartUpDebugger(PgmList_t ProgramList[],
+000400140113                     int ProgramListCount) {
+000401140113
+000402140113  _TE_ERROR_CODE_T errorCode = {0}; /* exceptions are generated      */
+000403140113  _TE_OBJLIB_T StopHandler = {"DEBUG     ", "*LIBL     "};
+000404140113  int i;
+000405140113
+000406140113  if (ProgramListCount!=1) {        /* is only 1 pgm passed on STRDBG*/
+000407140113    printf("Exactly ONE program must be specified on STRDBG.\n");
+000408140113    TearDownDebugger();             /* end debugger                  */
+000409140113  }
+000410140113
+000411140113  /* Copy program name to global variables                           */
+000412140113  memcpy(&program_lib, &ProgramList->PgmLib, 20);
+000413140113
+000414140113  /* Call StartSourceDebug: giving the name and library of the       */
+000415140113  /* stop handler.  This will start ILE debug mode                   */
+000416140113  QteStartSourceDebug(&StopHandler, &errorCode);
+000417140113
+000418140113  AddProgram();                     /* add program to debug          */
+000419140113}
+000420140113
+000421140113/* HandleSession:  This function is called to handle the session     */
+000422140113/* events STRDBG, DSPMODSRC and ENDDBG.                              */
+000423140113void HandleSession(char reason[10],
+000424140113                   PgmList_t ProgramList[],
+000425140113                   int ProgramListCount) {
+000426140113
+000427140113  if (memcmp(reason,"*START    ",10) == 0) /* reason is *START       */
+000428140113    StartUpDebugger(ProgramList, ProgramListCount);
+000429140113  else if ( memcmp(reason,"*STOP     ",10) == 0) /* reason is *STOP  */
+000430140113    TearDownDebugger();
+000431140113  else if ( memcmp(reason,"*DISPLAY  ",10) == 0) /* reason *DISPLAY  */
+000432140113    ProcessCommands();
+000433140113}
+000434140113
+000435140113/* HandleStop: This function is called to handle stop events like    */
+000436140113/* breakpoint, step, unmonitored exception, etc.                     */
+000437140113void HandleStop(_TE_OBJLIB_T *ProgramLib,
+000438140113                _TE_NAME_T ProgramType,
+000439140113                _TE_NAME_T Module,
+000440140113                char reason[10],
+000441140113                long Statements[],
+000442140113                int StatementsCount,
+000443140113                char *message) {
+000444140113  int i;
+000445140113  _TE_MAPP0100_T Map_Return_Structure;
+000446140113  long Column = 1;
+000447140113  long MapLength = sizeof(Map_Return_Structure);
+000448140113  _TE_ERROR_CODE_T errorCode = {64};
+000449140113  long stmt_view;
+000450140113
+000451140113  /* If current view is for a different module than the one that is  */
+000452140113  /* stopped, change current view to first view in the stopped module*/
+000453140113  if (memcmp(Module,
+000454140113             pgm_dbg_dta->Element[current_view].ModuleName,
+000455140113             sizeof(_TE_NAME_T)) != 0) { /* a different module?      */
+000456140113    for (i=0; i<pgm_dbg_dta->NumberElements; i++) {
+000457140113      if (memcmp(Module,
+000458140113                 pgm_dbg_dta->Element[i].ModuleName,
+000459140113                 sizeof(_TE_NAME_T)) == 0) { /* found module         */
+000460140113        current_view = i;           /* change current view to module */
+000461140113        printf("Current view changed to %d.\n",current_view);
+000462140113        break;                      /* exit search loop              */
+000463140113      }                             /* module found                  */
+000464140113    }                               /* loop through views            */
+000465140113  }                                 /* current view to be changed    */
+000466140113
+000467140113  /* Get number of statement view for module stopped                 */
+000468140113  for (i=0; i<pgm_dbg_dta->NumberElements; i++) {
+000469140113    if ((memcmp(Module,
+000470140113               pgm_dbg_dta->Element[i].ModuleName,
+000471140113               sizeof(_TE_NAME_T)) == 0) &&
+000472140113        (memcmp("*STATEMENT",
+000473140113                 pgm_dbg_dta->Element[i].ViewType,
+000474140113                 sizeof(_TE_NAME_T)) == 0))
+000475140113      stmt_view = i;
+000476140113  }
+000477140113
+000478140113
+000479140113  /* Call QteMapViewPosition to map the stopped location (which      */
+000480140113  /* is in terms of the *STATEMENT view) to the current view of      */
+000481140113  /* the module                                                      */
+000482140113  QteMapViewPosition((char *)&Map_Return_Structure, &MapLength,
+000483140113                     &pgm_dbg_dta-> Element[stmt_view].ViewNumber,
+000484140113                     &Statements[0], &Column,
+000485140113                     &pgm_dbg_dta->Element[current_view].ViewNumber,
+000486140113                     &errorCode);
+000487140113
+000488140113  /* Tell the user about the program that stopped.                   */
+000489140113  for (i=0;i<4;i++) {               /* See why program stopped       */
+000490140113    if (reason[i] == '1') {
+000491140113      switch(i) {
+000492140113        case 0: printf("Unmonitored exception");
+000493140113          break;
+000494140113        case 1: printf("Breakpoint");
+000495140113          break;
+000496140113        case 2: printf("Step completed");
+000497140113          break;
+000498140113        case 3: printf("Breakpoint condition error");
+000499140113          break;
+000500140113      }
+000501140113    }
+000502140113  }
+000503140113  printf(" in module %.10s at line %d.\n",
+000504140113         Module,
+000505140113         Map_Return_Structure.MapElem[0].LineNumber);
+000506140113
+000507140113  ProcessCommands();                /* put user into debugger        */
+000508140113}
+000509140113
+000510140113/* main: Entry point for the debugger (session or stop handler)      */
+000511140113main (int argc, char *argv[]) {
+000512140113  if (argc == 4)                    /* called as source debug program*/
+000513140113    HandleSession(argv[1], (PgmList_t *)argv[2], *(int
+000514140113*)argv[3]);
+000515140113  else if (argc == 8)             /* called as program stop handler */
+000516140113    HandleStop((_TE_OBJLIB_T *)argv[1], argv[2],
+000517140113argv[3], argv[4],
+000518140113               (long *)argv[5], *(int *)argv[6],
+000519140113argv[7]);
+000520140113}

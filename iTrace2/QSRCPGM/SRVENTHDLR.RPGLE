@@ -1,15 +1,16 @@
-000100
-000101121002     h option(*nodebugio:*noxref:*srcstmt)
-000102121002     h bnddir('TRACEBNDD')
-000103121002     h dftactgrp(*NO)
-000104121002     h actgrp('TRACEPGM')
-000105121002
-000106121002      ///////////////////////////////////////////////////////
-000107121002      // Prototype declaration
-000108121002      ///////////////////////////////////////////////////////
-000109121002
-000110121028      /include qsrctxt,tracetypes
-000111121002
+000100      
+000101140110     h debug(*no)
+000102121002     h option(*nodebugio:*noxref:*srcstmt)
+000103121002     h bnddir('TRACEBNDD')
+000104121002     h dftactgrp(*NO)
+000105121002     h actgrp('TRACEPGM')
+000106121002
+000107121002      ///////////////////////////////////////////////////////
+000108121002      // Prototype declaration
+000109121002      ///////////////////////////////////////////////////////
+000110121002
+000111121028      /include qsrctxt,tracetypes
+000112121002
 000114121002     d SRVENTHDLR_main...
 000115121002     d                 pr                  extpgm('SRVENTHDLR')
 000116121002     d  programName                        const likeds(programName_type)
@@ -32,7 +33,9 @@
 000134121002
 000135121002      /free
 000136121002
-000137121002
-000138121002       *inLR = *ON;
-000139121002       return;
-000140121002      /end-free
+000137140110       dsply 'SEP!!';
+000138140110       dsply job;
+000139121002
+000140140110       *inLR = *ON;
+000141121002       return;
+000142121002      /end-free

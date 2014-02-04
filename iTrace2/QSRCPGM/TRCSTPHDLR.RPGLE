@@ -116,22 +116,28 @@
 000259120821     d stmtLine        s             10i 0
 000265121011     d programIndex    s             10i 0
 000266121011     d viewIndex       ds                  likeds(viewIndex_type)
-000267121011
-000268120720      /free
-000269120723       monitor;
-000270121011         reset program_data;
-000271121011
-000273120802         //Get the current stopped line
-000274120802         StopInfoPtr = %addr(receiverDta);
-000275120730
-000276120802         //The stop reason must be a 'step' action
-000277120802         if %subst(stopReason:STEP_CONDITION:1) <> '1';
-000280120802           return;
-000281120802         endif;
-000282120721
-000284120802         tempProgramName = programName;
-000285120802         tempProgramType = programType;
-000286120730
+000267140110     d stmtBreakLine   s             10i 0
+000268140110     d errorDS         ds                  likeds(ApiError_Type) inz(*likeds)
+000269120720      /free
+000270120723       monitor;
+000271140110         dsply 'CALLED';
+000272140110
+000273121011         reset program_data;
+000274121011
+000275120802         //Get the current stopped line
+000276120802         StopInfoPtr = %addr(receiverDta);
+000277120730
+000278120802         //The stop reason must be a 'step' action
+000279140110         dsply stopReason;
+000280140110
+000281120802         if %subst(stopReason:STEP_CONDITION:1) <> '1';
+000282140110           dsply stopReason;
+000283120802           return;
+000284120802         endif;
+000285120721
+000286120802         tempProgramName = programName;
+000287120802         tempProgramType = programType;
+000288120730
 000300120802         //Look for the program data in the list
 000301121011         programIndex = TRCHANDLER_findProgramDebugData(
 000302120802            tempProgramName:tempProgramType);
@@ -174,29 +180,37 @@
 000466121004           endmon;
 000467121011         endif;
 000468120730
-000469120802         //Check if the stopped program is registered in the step into the
-000470120802         //exceptions. If the program must not be trace, execute a step out
-000471120802         //debug action
-000472121011         if TRCRULES_doStepInto(tempProgramName.library
-000473121011                               :tempProgramName.name
-000474121011                               :procedureName);
-000475121011           TRCHANDLER_step(viewIndex.statementId:*ON:1);
-000476121011         else;
-000477120802           //Do a step out
-000478121011           TRCHANDLER_submitDebugCommand('STEP OUTOF'
-000479121011               :program_data.debugData.elements(viewIndex.statement).compilerId
-000480121011               :viewIndex.statementId);
-000481121011         endif;
-000482120730
-000483120802         return;
-000484120720       on-error;
-000485120720         CEXCEPTION_catchException();
-000486120720         CEXCEPTION_printStackTrace();
-000487120720         return;
-000488120720       endmon;
-000489120720      /end-free
-000490120723      //_______________________________________________________________________
-000491120723
+000469140110           errorDs.Bytes = 0;
+000470140110          AddBreakpointAPI(
+000471140110                          viewIndex.statementId
+000472140110                          :24
+000473140110                          :1
+000474140110                          :stmtBreakLine
+000475140110                          :errorDS );
+000476140110
+000477120802         //Check if the stopped program is registered in the step into the
+000478120802         //exceptions. If the program must not be trace, execute a step out
+000479120802         //debug action
+000480140110       //  if TRCRULES_doStepInto(tempProgramName.library
+000481140110       //                        :tempProgramName.name
+000482140110       //                        :procedureName);
+000483140110       //    TRCHANDLER_step(viewIndex.statementId:*ON:1);
+000484140110       //  else;
+000485140110       //    //Do a step out
+000486140110       //    TRCHANDLER_submitDebugCommand('STEP OUTOF'
+000487140110       //        :program_data.debugData.elements(viewIndex.statement).compilerId
+000488140110       //        :viewIndex.statementId);
+000489140110       //  endif;
+000490120730
+000491120802         return;
+000492120720       on-error;
+000493120720         CEXCEPTION_catchException();
+000494120720         CEXCEPTION_printStackTrace();
+000495120720         return;
+000496120720       endmon;
+000497120720      /end-free
+000498120723      //_______________________________________________________________________
+000499120723
 000509120816     /**
 000510120816      * \brief checkWriteTrace: check if the line must be written
 000511120816      *

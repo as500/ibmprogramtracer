@@ -23,28 +23,34 @@
 000123120720     d programName                         likeds(programName_type)
 000124120720     d programType                   10a   const
 000126120720
-000133120720     d TRCHANDLER_findProgramDebugData...
-000134121011     d                 pr            10i 0
-000135120720     d programName                         likeds(programName_type) const
-000136120720     d programType                   10a   const
-000137120720
-000138121011     d TRCHANDLER_retrieveDebugViews...
-000139121011     d                 pr
-000140121011     d programName                         likeds(programName_type)
-000141121011     d programType                   10a   const
-000142121011     d programData                         likeds(programData_type)
-000143121011
-000144121009     d TRCHANDLER_retrieveTextLineFromView...
-000145120720     d                 pr                  likeds(codeLine_type)
-000146120720     d viewId                        10i 0 const
-000147120720     d lineNumber                    10i 0 const
-000148121004     d viewType                      10a   const
-000149121004
-000150121009     d TRCHANDLER_getCodeLine...
-000151121009     d                 pr                  likeds(codeLine_type)
-000152121009     d viewIndex                           likeds(viewIndex_type) const
-000153121009     d stoppedLine                   10i 0 const
-000154121009
+000127140110     d TRCHANDLER_startSEPMonitor...
+000129140110     d                 pr
+000130140110     d program                       20a   const
+000131140110     d programType                   10a   const
+000132140110     d stopHandler                   20a   const
+000133140110
+000134120720     d TRCHANDLER_findProgramDebugData...
+000135121011     d                 pr            10i 0
+000136120720     d programName                         likeds(programName_type) const
+000137120720     d programType                   10a   const
+000138120720
+000139121011     d TRCHANDLER_retrieveDebugViews...
+000140121011     d                 pr
+000141121011     d programName                         likeds(programName_type)
+000142121011     d programType                   10a   const
+000143121011     d programData                         likeds(programData_type)
+000144121011
+000145121009     d TRCHANDLER_retrieveTextLineFromView...
+000146120720     d                 pr                  likeds(codeLine_type)
+000147120720     d viewId                        10i 0 const
+000148120720     d lineNumber                    10i 0 const
+000149121004     d viewType                      10a   const
+000150121004
+000151121009     d TRCHANDLER_getCodeLine...
+000152121009     d                 pr                  likeds(codeLine_type)
+000153121009     d viewIndex                           likeds(viewIndex_type) const
+000154121009     d stoppedLine                   10i 0 const
+000155121009
 000157120726     d TRCHANDLER_getCurrentProcedureName...
 000158120726     d                 pr          1024a
 000159121009     d stmtBufferPtr                   *   const
