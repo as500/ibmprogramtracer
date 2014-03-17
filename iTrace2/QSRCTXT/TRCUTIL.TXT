@@ -1,8 +1,0 @@
-000100120731      /if not defined(TRCUTIL)
-000101120731      /define TRCUTIL
-000102120731
-000103120731     d TRCUTIL_sendProgramMessage...
-000105120731     d                 pr
-000106120731     d message                      150a   const
-000107120731
-000108120731      /endif

@@ -1,3 +1,0 @@
-000100120518        strpgmexp pgmlvl(*current)
-000101120518             export symbol(CSQLUTIL_checkSQLState)
-000102120518        endpgmexp
