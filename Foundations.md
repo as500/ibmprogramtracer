@@ -1,0 +1,3 @@
+iTrace depends heavily on the _Debugger APIs_ of the IBM i operating system. With those APIs, iTrace keeps track of every executed line of a program/service program and any other program/service program that it calls during is runtime.
+
+With the information collected, it is possible to do dynamic analysis of the source code and calculate code coverage metrics. Check the following sections for more information.

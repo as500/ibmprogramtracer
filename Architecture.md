@@ -1,0 +1,1 @@
+![https://ibmprogramtracer.googlecode.com/svn/wiki/images/ITraceComponentDiagram.png](https://ibmprogramtracer.googlecode.com/svn/wiki/images/ITraceComponentDiagram.png)
